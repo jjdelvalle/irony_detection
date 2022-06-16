@@ -38,7 +38,7 @@ optional arguments:
 | Approach | Accuracy | F1 Score|
 |----------|----------|---------|
 | Naive baseline | 0.60 | 0.02|
-| TF-IDF | 0.66 | | 0.58|
+| TF-IDF | 0.66 | 0.58|
 | FastText Embeddings | **0.68** | **0.61** |
 | DistilRoberta FT | 0.61 | 0.04 |
 
