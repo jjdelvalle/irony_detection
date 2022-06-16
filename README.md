@@ -39,7 +39,7 @@ optional arguments:
 |----------|----------|---------|
 | Naive baseline | 0.60 | 0.02|
 | TF-IDF | 0.66 | | 0.58|
-| FastText Embeddings | 0.68 | 0.61 |
+| FastText Embeddings | **0.68** | **0.61** |
 | DistilRoberta FT | 0.61 | 0.04 |
 
 Where:
@@ -47,6 +47,14 @@ Where:
 * The naive baseline is simply predicting no sarcasm for all tweets.
 * FastText is using 30 epochs to train and 2-grams.
 * DistilRoberta is fine tuned over 3 epochs on a GPU.
+
+
+## Conclusion
+
+It seems that when running on limited resources, the best approach is to use precomputed embeddings for the classification task.
+
+The obvious caveat here is that the performance for the deep learning approach probably requires a lot of time and resources to fine tune properly.
+The winner of this task as SemEval2018 got 0.73 accuracy for some context.
 
 ## Acknowledgements
 
