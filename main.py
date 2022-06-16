@@ -20,7 +20,8 @@ parser.add_argument("--classifier", choices=['MLPClassifier', 'SVC', 'AdaBoostCl
                                     type=str,
                                     help="Pick a classifying method.")
 parser.add_argument('--epochs', type=int, default=30, help='Specify number of training epochs.')
-parser.add_argument("--predict", action='store_true', default=False, help="Predict instead of train.")
+parser.add_argument("--no_cache", action='store_true', default=False, help="Ignore cached files.")
+parser.add_argument("--predict", action='store_true', default=False, help="Predict using a cached model.")
 parser.add_argument("--aggressive_clean", action='store_true', default=False, help="Aggressive clean up of data.")
 parser.add_argument("input_path", type=str, help="Path to directory containing data. If `--predict` is set, this file contains phrases to be classified.")
 
@@ -35,8 +36,14 @@ def clean_data(df: pd.DataFrame, args):
     df["text"] = df["text"].str.lower()
 
     if args.aggressive_clean:
-        df["text"] = df["text"].str.replace(r"#[a-z0-9]", "_hashtag", regex=True)
-        df["text"] = df["text"].str.replace(r"@[a-z0-9_]", "_mention", regex=True)
+        # Twitter specific clean up
+        df["text"] = df["text"].str.replace(r"#([a-z0-9])", r"_hashtag \1", regex=True)
+        df["text"] = df["text"].str.replace(r"@[a-z0-9_]+", r"_mention", regex=True)
+        df["text"] = df["text"].str.replace(r"https?://[^\s]+", "_url ", regex=True)
+
+        # Separate out symbols since tokenizers might not handle them properly.
+        # as per fastText documentation:
+        df["text"] = df["text"].str.replace(r"([\.\\!\?,'/\(\)])", r" \1 ", regex=True)
     return df
 
 def prepare_data(input_path: str):
@@ -52,10 +59,10 @@ def prepare_data(input_path: str):
            test['text'],\
            test['label']
 
-def prepare_fasttext(texts: pd.Series, labels: pd.Series, out_name: str):
+def prepare_fasttext(texts: pd.Series, labels: pd.Series, out_name: str, ignore_cache: bool):
     # Prepare data if not already cached
     # Maybe move this to a method instead of having it here
-    if not os.path.isfile(out_name):
+    if not os.path.isfile(out_name) or ignore_cache:
         fast_df = pd.DataFrame({'label': labels, 'text': texts})
 
         # We need to prepare labels for fasttext
@@ -97,8 +104,8 @@ def main(args):
         # Prepare data if necessary
         FAST_TRAIN_FILE = 'data/fast_train.txt'
         FAST_TEST_FILE = 'data/fast_test.txt'
-        prepare_fasttext(X_train, y_train, FAST_TRAIN_FILE)
-        prepare_fasttext(X_test, y_test, FAST_TEST_FILE)
+        prepare_fasttext(X_train, y_train, FAST_TRAIN_FILE, args.no_cache)
+        prepare_fasttext(X_test, y_test, FAST_TEST_FILE, args.no_cache)
 
         import fasttext
         # Train our classifier using bigrams and finetuned epochs
@@ -157,9 +164,6 @@ def main(args):
     # Classification metrics
     print(f"Accuracy: {accuracy_score(y_test, y_pred)}")
     print(f"F1 Score: {f1_score(y_test, y_pred)}")
-
-    # report = classification_report(y_test, y_pred)
-    # print(report)
 
 if __name__ == "__main__":
     args = parser.parse_args()
