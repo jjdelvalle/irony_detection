@@ -15,7 +15,7 @@ All of these provide different advantages and an *overall* winner will be picked
 ## Usage
 
 ```
-usage: main.py [-h] [--vectorizer {tfidf,emb,deep}] [--classifier {MLPClassifier,SVC,AdaBoostClassifier}] [--epochs EPOCHS] [--predict]
+usage: main.py [-h] [--vectorizer {tfidf,emb,deep}] [--classifier {MLPClassifier,SVC,AdaBoostClassifier}] [--epochs EPOCHS] [--no_cache] [--predict]
                [--aggressive_clean]
                input_path
 
@@ -29,9 +29,22 @@ optional arguments:
   --classifier {MLPClassifier,SVC,AdaBoostClassifier}
                         Pick a classifying method.
   --epochs EPOCHS       Specify number of training epochs.
+  --no_cache            Ignore cached files.
   --predict             Predict using a cached model.
   --aggressive_clean    Aggressive clean up of data.
 ```
+
+### Usage Examples
+
+To train a model using FastText embeddings and assuming our data lies in a directory called `my_data`:
+
+`python main.py --vectorizer=emb --aggressive_clean my_data`
+
+To predict using a TF-IDF model over a file called `sentences.txt` you would run:
+
+`python main.py --vectorizer=tfidf --aggressive_clean --predict sentences.txt`
+
+After predicting, predictions will be written to a new file called `sentences.txt_preds.txt` in our example.
 
 ## Results
 
