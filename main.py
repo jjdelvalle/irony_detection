@@ -70,6 +70,12 @@ def prepare_data(input_path: Path) -> Tuple[pd.Series, pd.Series, pd.Series, pd.
            test['label']
 
 def prepare_fasttext(texts: pd.Series, labels: pd.Series, out_name: str, ignore_cache: bool) -> None:
+    """
+    Prepare input files for the fasttext model to train on.
+
+    This is needed because fasttext expects its input in a very
+    specific format.
+    """
     # Prepare data if not already cached
     # Maybe move this to a method instead of having it here
     if not os.path.isfile(out_name) or ignore_cache:
@@ -83,8 +89,8 @@ def prepare_fasttext(texts: pd.Series, labels: pd.Series, out_name: str, ignore_
         fast_df.to_csv(out_name, sep='\t', header=False, index=False)
 
 def tfidf_vectorize(X_train: pd.Series, X_test: pd.Series) -> Tuple[TfidfVectorizer,
-                                                                         np.array,
-                                                                         np.array]:
+                                                                    np.array,
+                                                                    np.array]:
     """
     Instantiate and fit a tf-idf vectorizer
     Also cache in case we want to just predict in the future,
@@ -98,9 +104,11 @@ def tfidf_vectorize(X_train: pd.Series, X_test: pd.Series) -> Tuple[TfidfVectori
 
     return train_vec, test_vec
 
-def get_tfidf_classifier(clas_string: str) -> Union[sklearn.svm.SVC,
-                                                    sklearn.ensemble.AdaBoostClassifier,
-                                                    sklearn.neural_network.MLPClassifier]:
+def get_tfidf_classifier(clas_string: str,
+                         train_vec: np.array,
+                         y_train: pd.Series) -> Union[sklearn.svm.SVC,
+                                                      sklearn.ensemble.AdaBoostClassifier,
+                                                      sklearn.neural_network.MLPClassifier]:
     """
     Instantiate classifier depending on the passed string
     """
@@ -116,9 +124,21 @@ def get_tfidf_classifier(clas_string: str) -> Union[sklearn.svm.SVC,
     else:
         classifier = getattr(sklearn.neural_network, clas_string)()
 
+    classifier.fit(train_vec, y_train)
+
     return classifier
 
-def get_fasttext_model(X_train, y_train, X_test, y_test, args):
+def get_fasttext_model(X_train: pd.Series,
+                       y_train: pd.Series,
+                       X_test: pd.Series,
+                       y_test: pd.Series,
+                       args: argparse.Namespace):
+    """
+    Prepare data, instatiate model and train it.
+
+    If the prepared input files already exist, use them
+    instead of creating them again.
+    """
     # Prepare data if necessary
     FAST_TRAIN_FILE = 'data/fast_train.txt'
     FAST_TEST_FILE = 'data/fast_test.txt'
@@ -135,7 +155,17 @@ def get_fasttext_model(X_train, y_train, X_test, y_test, args):
 
     return model
 
-def get_dl_classifier(X_train, y_train, X_test, y_test, args):
+def get_dl_classifier(X_train: pd.Series,
+                      y_train: pd.Series,
+                      X_test: pd.Series,
+                      y_test: pd.Series,
+                      args: argparse.Namespace):
+    """
+    Download pretrained model from HF, instantiate it, and train it.
+
+    Training will be done using some settings found by empirically testing
+    different hyper-parameters, the rest are set by the CLI options.
+    """
     from transformers import RobertaTokenizer, RobertaForSequenceClassification
     from transformers import Trainer, TrainingArguments
 
@@ -176,8 +206,7 @@ def main(args):
     # Building a TF IDF matrix out of the corpus of reviews
     if args.vectorizer == 'tfidf':
         train_vec, test_vec = tfidf_vectorize(X_train, X_test)
-        classifier = get_tfidf_classifier(args.classifier)
-        classifier.fit(train_vec, y_train)
+        classifier = get_tfidf_classifier(args.classifier, train_vec, y_train)
     
         y_pred = classifier.predict(test_vec)
 
