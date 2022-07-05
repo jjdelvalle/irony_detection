@@ -5,6 +5,7 @@ import os.path
 import argparse
 import pandas as pd
 import numpy as np
+from pathlib import Path
 
 # Import our metric-related stuff
 from sklearn.metrics import accuracy_score, classification_report, f1_score
@@ -23,10 +24,10 @@ parser.add_argument('--epochs', type=int, default=30, help='Specify number of tr
 parser.add_argument("--no_cache", action='store_true', default=False, help="Ignore cached files.")
 parser.add_argument("--predict", action='store_true', default=False, help="Predict using a cached model.")
 parser.add_argument("--aggressive_clean", action='store_true', default=False, help="Aggressive clean up of data.")
-parser.add_argument("input_path", type=str, help="Path to directory containing data. If `--predict` is set, this file contains phrases to be classified.")
+parser.add_argument("input_path", type=Path, help="Path to directory containing data. If `--predict` is set, this file contains phrases to be classified.")
 
-def read_data(read_path: str):
-    df = pd.read_csv(f"{read_path}/SemEval_T3_taskA.txt", sep="\t")
+def read_data(read_path: Path):
+    df = pd.read_csv(read_path/"SemEval_T3_taskA.txt", sep="\t")
     return df
 
 def clean_data(df: pd.DataFrame, args):
@@ -46,9 +47,9 @@ def clean_data(df: pd.DataFrame, args):
         df["text"] = df["text"].str.replace(r"([\.\\!\?,'/\(\)])", r" \1 ", regex=True)
     return df
 
-def prepare_data(input_path: str):
-    train = read_data(f"{input_path}/train")
-    test = read_data(f"{input_path}/gold")
+def prepare_data(input_path: Path):
+    train = read_data(input_path/"train")
+    test = read_data(input_path/"gold")
 
     train = clean_data(train, args)
     test = clean_data(test, args)
